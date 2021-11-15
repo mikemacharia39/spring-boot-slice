@@ -1,6 +1,6 @@
 # spring boot slice
 
-##Slice
+## Slice
 
 This application shows how to use **slice** to process data in chunks
 
@@ -17,9 +17,9 @@ A **Slice** only knows about whether a next or previous Slice is available, whic
     Slice<Employee> findByDateCreated(Date dateCreated, Pageable pageable);
 ````
 
-##Stream
+## Stream
 
-You can also use stream to query data
+You can also use stream to query data, as a stream
 
 ````java
     @QueryHints(value = {
