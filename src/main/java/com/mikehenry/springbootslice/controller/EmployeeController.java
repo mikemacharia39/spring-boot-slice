@@ -26,4 +26,14 @@ public class EmployeeController {
 
         return "Completed";
     }
+
+    @PostMapping("updateNullEmails")
+    @ResponseStatus(HttpStatus.OK)
+    public String updateNullEmails() {
+        log.info("Received request to process request");
+
+        employeeService.findNullEmailAddress();
+
+        return "Completed";
+    }
 }
