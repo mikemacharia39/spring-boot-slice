@@ -30,3 +30,6 @@ You can also use stream to query data, as a stream
     @Query("SELECT e FROM Employee e WHERE emailAddress IS NULL")
     Stream<Employee> findByNullEmailAddress();
 ````
+
+Postman \
+https://go.postman.co/workspace/My-Workspace~4e712096-b61e-4c02-85fb-5ab46f16a14e/collection/13894760-cfcc8135-d475-470f-9842-90951fa8d354
