@@ -28,4 +28,8 @@ public class Task {
 
     @Column(name = "assignee")
     private String assignee;
+
+    @ManyToOne(fetch = FetchType.EAGER)
+    @JoinColumn(name = "employeeID")
+    private Employee employee;
 }

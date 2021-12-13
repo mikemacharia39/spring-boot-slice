@@ -13,6 +13,18 @@ CREATE TABLE `employees` (
     PRIMARY KEY (`employeeID`)
     ) ENGINE=InnoDB;
 
+CREATE TABLE `tasks` (
+  `taskID` bigint(20) NOT NULL AUTO_INCREMENT,
+  `taskName` varchar(100) NOT NULL,
+  `description` varchar(500) DEFAULT NULL,
+  `assigner` varchar(20) DEFAULT NULL,
+  `assignee` varchar(20) DEFAULT NULL,
+  `dateCreated` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  `dateModified` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  `employeeID` bigint(20) DEFAULT NULL,
+  PRIMARY KEY (`taskID`)
+) ENGINE=InnoDB;
+
 INSERT IGNORE INTO `employees` (`employeeID`, `firstName`, `lastName`, `emailAddress`, `active`, `dateCreated`, `dateModified`) VALUES
 (NULL, 'Mikehenry', 'Maina', 'mikemacharia39@gmail.com', 1, '2020-12-14 08:31:00', '2020-12-13 21:00:00'),
 (NULL, 'Maxwell', 'Mzito', NULL, 1, '2020-12-14 10:58:38', '2020-12-14 10:58:38'),

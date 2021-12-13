@@ -6,6 +6,7 @@ import org.hibernate.annotations.Generated;
 import org.hibernate.annotations.GenerationTime;
 import javax.persistence.*;
 import java.util.Date;
+import java.util.List;
 
 @Getter
 @Setter
@@ -38,4 +39,7 @@ public class Employee {
     private Date dateModified;
 
     private String changeDetails;
+
+    @OneToMany(mappedBy = "employee", fetch = FetchType.EAGER)
+    private List<Task> tasks;
 }

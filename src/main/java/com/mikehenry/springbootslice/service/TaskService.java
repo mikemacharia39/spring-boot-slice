@@ -1,8 +1,14 @@
 package com.mikehenry.springbootslice.service;
 
+import com.mikehenry.springbootslice.model.Employee;
 import com.mikehenry.springbootslice.model.Task;
+import com.mikehenry.springbootslice.repository.EmployeeRepository;
+import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Slice;
+import org.springframework.data.domain.SliceImpl;
 import org.springframework.stereotype.Service;
 
 import javax.persistence.*;
@@ -10,14 +16,14 @@ import javax.persistence.criteria.CriteriaBuilder;
 import javax.persistence.criteria.CriteriaQuery;
 import javax.persistence.criteria.Predicate;
 import javax.persistence.criteria.Root;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.List;
-import java.util.Random;
+import java.util.*;
 
 @Slf4j
 @Service
+@RequiredArgsConstructor
 public class TaskService {
+
+    private final EmployeeRepository employeeRepository;
 
     @Autowired
     private EntityManagerFactory entityManagerFactory;
@@ -40,11 +46,15 @@ public class TaskService {
 
             Random  random = new Random();
 
+            Optional<Employee> optionalEmployee = employeeRepository.findById(1L);
+            Employee employee = optionalEmployee.get();
+
             for (int i = 0; i < 10; i++) {
                 String assigner = assignerList.get(random.nextInt(assignerList.size()));
                 String assignee = assigneeList.get(random.nextInt(assigneeList.size()));
 
                 Task task = new Task();
+                task.setEmployee(employee);
                 task.setTaskName("Task " + i);
                 task.setAssigner(assigner);
                 task.setAssignee(assignee);
@@ -92,4 +102,83 @@ public class TaskService {
         return entityManager.createQuery(criteriaQuery).getResultList();
     }
 
+    /**
+     * Return tasks by employee name
+     * @param employeeName employeeName
+     * @return List<Tasks> associated with employee
+     */
+    public List<Task> findTaskByEmployeeNameAsList(String employeeName) {
+        entityManager = entityManagerFactory.createEntityManager();
+
+        TypedQuery<Task> typedQuery = entityManager.createQuery(
+                "SELECT tsk FROM Employee e " +
+                        "INNER JOIN e.tasks tsk " +
+                        "WHERE e.firstName = :firstName",
+                Task.class);
+
+        List<Task> taskList = typedQuery
+                .setParameter("firstName", employeeName)
+                .getResultList();
+
+        log.info("{} has {} tasks", employeeName, taskList.size());
+
+        return taskList;
+    }
+
+    /**
+     * Return tasks by employee name
+     * @param employeeName employeeName
+     * @return List<Tasks> associated with employee
+     */
+    public Slice<Task> findTaskByEmployeeNameAsSlice(String employeeName, Pageable pageable) {
+        entityManager = entityManagerFactory.createEntityManager();
+
+        TypedQuery<Task> typedQuery = entityManager.createQuery(
+                "SELECT tsk FROM Employee e " +
+                        "INNER JOIN e.tasks tsk " +
+                        "WHERE e.firstName = :firstName",
+                Task.class);
+
+        int pageSize = pageable.getPageSize();
+        int offset = pageable.getPageNumber() > 0 ? pageable.getPageNumber() * pageSize : 0;
+
+        typedQuery.setMaxResults(pageSize + 1);
+        typedQuery.setFirstResult(offset);
+
+        List<Task> taskList = typedQuery
+                .setParameter("firstName", employeeName)
+                .getResultList();
+
+        boolean hasNext =  pageable.isPaged() && taskList.size() > pageSize;
+
+        return new SliceImpl<>(hasNext ? taskList.subList(0, pageSize) : taskList, pageable, hasNext);
+    }
+
+    /**
+     * To update task details
+     * @param taskList task
+     */
+    public void updateListOfTaskDetails(List<Task> taskList) {
+        log.info("updating tasks");
+        try {
+            entityManager = entityManagerFactory.createEntityManager();
+            entityManager.getTransaction().begin();
+
+            taskList.forEach(task -> entityManager.merge(task));
+
+            entityManager.getTransaction().commit();
+        } catch (RuntimeException e) {
+            if (entityManager.getTransaction() != null && entityManager.getTransaction().isActive()) {
+                entityManager.getTransaction().rollback();
+            }
+            log.error("Error initializing entity manager  " + e.getMessage());
+        } finally {
+            if (entityManager != null) {
+                entityManager.close();
+            }
+            log.error("closed entity manager");
+        }
+
+        log.info("updated task update");
+    }
 }
