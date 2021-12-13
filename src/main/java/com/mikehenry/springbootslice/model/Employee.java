@@ -21,8 +21,10 @@ public class Employee {
     @Column(nullable = false)
     private String firstName;
 
+    @Column(name = "lastName")
     private String lastName;
 
+    @Column(name = "emailAddress")
     private String emailAddress;
 
     private int active;
@@ -33,7 +35,6 @@ public class Employee {
 
     @Basic(optional = false)
     @Temporal(TemporalType.TIMESTAMP)
-    @Column(insertable = false, updatable = false)
     private Date dateModified;
 
     private String changeDetails;

@@ -3,27 +3,43 @@ package com.mikehenry.springbootslice.service;
 import com.mikehenry.springbootslice.model.Employee;
 import com.mikehenry.springbootslice.repository.EmployeeRepository;
 import com.mikehenry.springbootslice.util.Utility;
+import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Slice;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 
+import javax.persistence.EntityManager;
+import javax.persistence.EntityManagerFactory;
+import javax.persistence.EntityTransaction;
+import javax.persistence.PersistenceContext;
+import javax.persistence.criteria.CriteriaBuilder;
+import javax.persistence.criteria.CriteriaQuery;
+import javax.persistence.criteria.Predicate;
+import javax.persistence.criteria.Root;
+import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
 import java.util.Optional;
-import java.util.stream.Stream;
 
 @Service
 @Slf4j
+@RequiredArgsConstructor
 public class EmployeeService {
 
-    @Autowired
-    private EmployeeRepository employeeRepository;
+    private final EmployeeRepository employeeRepository;
 
-    @Transactional
+    @Autowired
+    private EntityManagerFactory entityManagerFactory;
+
+    @PersistenceContext
+    private EntityManager entityManager;
+
+
     public void getEmployeeLesserThanCurrentDate() {
 
         int pageNumber = 0;
@@ -52,7 +68,7 @@ public class EmployeeService {
         log.info("Completed" + Utility.getTAT(startTime));
     }
 
-    private void updateEmployeeDateModified(Long employeeID) {
+    public void updateEmployeeDateModified(Long employeeID) {
         Optional<Employee> optionalEmployee = employeeRepository.findById(employeeID);
         if (optionalEmployee.isEmpty()) {
             log.error("EmployeeID " + employeeID + " is missing");
@@ -60,33 +76,154 @@ public class EmployeeService {
         }
         Employee employee = optionalEmployee.get();
         employee.setChangeDetails(employee.getFirstName() + "_" + System.currentTimeMillis());
-        log.error("Successfully updated employee");
         employeeRepository.save(employee);
+        log.info("Successfully updated employee");
     }
 
-    @Transactional(readOnly = true)
+    /**
+     * Apparently, it appears while using slice, we cannot update records
+     */
     public void findNullEmailAddress() {
-        Stream<Employee> employeeStream = employeeRepository.findByNullEmailAddress();
+        Pageable pageable = PageRequest.of(0, 3);
 
-        employeeStream.forEach(employee -> {
-            log.info("Fetched employee " + employee.getFirstName());
-                updateEmployeeEmails(employee.getEmployeeID());
+        boolean hasMoreSlices;
+        do {
+            Slice<Employee> employeeSlice = employeeRepository.findNullEmailAddresses(pageable);
+
+            hasMoreSlices = employeeSlice.hasNext();
+
+            List<Employee> employeeList = employeeSlice.getContent();
+
+            processEmailUpdate(employeeList);
+
+            pageable = employeeSlice.nextPageable();
+        } while (hasMoreSlices);
+    }
+
+    private void processEmailUpdate(List<Employee> employeeList) {
+        employeeList.forEach(employee -> {
+            updateEmployeeEmails(employee.getEmployeeID());
+        });
+    }
+
+
+    public void findByNullEmailAddress() {
+        List<Employee> employeeList = employeeRepository.findByEmailAddressNull();
+
+        employeeList.forEach(employee -> {
+            updateEmployeeEmails(employee.getEmployeeID());
         });
     }
 
     /**
      * NB:// The update doesn't work
+     *
      * @param employeeID employeeID
      */
-    private void updateEmployeeEmails(Long employeeID) {
+
+    public void updateEmployeeEmails(Long employeeID) {
         Optional<Employee> optionalEmployee = employeeRepository.findById(employeeID);
         if (optionalEmployee.isEmpty()) {
             log.error("EmployeeID " + employeeID + " is missing");
             return;
         }
         Employee employee = optionalEmployee.get();
-        employee.setEmailAddress(employee.getFirstName()+employee.getLastName()+"@gmail.com");
-        log.error("Successfully updated employee email");
-        employeeRepository.save(employee);
+        String email = employee.getFirstName() + "." + employee.getLastName() + "@gmail.com";
+        employee.setEmailAddress(email);
+        employee.setActive(6);
+        Employee updateEmployee = employeeRepository.save(employee);
+
+        log.info("Successfully updated employee email " + updateEmployee.getEmailAddress());
     }
+
+
+    /**
+     * Use criteria query to find null email addresses
+     */
+    public void findByEmailAddressNullCQ() {
+        List<Employee> employeeList = findByNullEmailAddressCriteriaQuery();
+        log.info("Found {} records", employeeList.size());
+        employeeList.forEach(this::updateEmployeeMail);
+    }
+
+
+    /**
+     * Use criteria query to find null email addresses
+     * @return list of null emails
+     */
+    public List<Employee> findByNullEmailAddressCriteriaQuery() {
+        entityManager = entityManagerFactory.createEntityManager();
+        CriteriaBuilder criteriaBuilder = entityManager.getCriteriaBuilder();
+
+        CriteriaQuery<Employee> criteriaQuery = criteriaBuilder.createQuery(Employee.class);
+
+        Root<Employee> employee = criteriaQuery.from(Employee.class);
+
+        List<Predicate> predicateList = new ArrayList<>();
+
+        predicateList.add(criteriaBuilder.isNull(employee.get("emailAddress")));
+
+        criteriaQuery.where(predicateList.toArray(new Predicate[0]));
+
+        return entityManager.createQuery(criteriaQuery).getResultList();
+    }
+
+
+    public void updateEmployeeMail(Employee employee) {
+        log.info("updating employee");
+        try {
+            entityManager = entityManagerFactory.createEntityManager();
+            entityManager.getTransaction().begin();
+            String email = employee.getFirstName() + "." + employee.getLastName() + "@gmail.com";
+            employee.setEmailAddress(email);
+
+            log.info("update email" + email);
+
+            entityManager.merge(employee);
+
+            entityManager.getTransaction().commit();
+        } catch (RuntimeException e) {
+            if (entityManager.getTransaction() != null && entityManager.getTransaction().isActive()) {
+                entityManager.getTransaction().rollback();
+            }
+            log.error("Error initializing entity manager  " + e.getMessage());
+        } finally {
+            if (entityManager != null) {
+                entityManager.close();
+            }
+            log.error("closed entity manager");
+        }
+
+        log.info("completed employee update");
+    }
+
+    /**
+     * Delete employee
+     * @param employeeID employeeID
+     */
+    public void deleteEmployee(Long employeeID) {
+        log.info("delete employee");
+        try {
+            entityManager = entityManagerFactory.createEntityManager();
+            entityManager.getTransaction().begin();
+
+            Employee employee = entityManager.find(Employee.class, employeeID);
+            entityManager.remove(employee);
+
+            entityManager.getTransaction().commit();
+        } catch (RuntimeException e) {
+            if (entityManager.getTransaction() != null && entityManager.getTransaction().isActive()) {
+                entityManager.getTransaction().rollback();
+            }
+            log.error("Error initializing entity manager  " + e.getMessage());
+        } finally {
+            if (entityManager != null) {
+                entityManager.close();
+            }
+            log.error("closed entity manager");
+        }
+
+        log.info("removed employee");
+    }
+
 }

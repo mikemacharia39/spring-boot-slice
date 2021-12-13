@@ -10,6 +10,7 @@ import org.springframework.stereotype.Repository;
 
 import javax.persistence.QueryHint;
 import java.util.Date;
+import java.util.List;
 import java.util.stream.Stream;
 
 import static org.hibernate.annotations.QueryHints.READ_ONLY;
@@ -33,4 +34,10 @@ public interface EmployeeRepository extends JpaRepository<Employee, Long> {
     })
     @Query("SELECT e FROM Employee e WHERE emailAddress IS NULL")
     Stream<Employee> findByNullEmailAddress();
+
+    @Query("SELECT e FROM Employee e WHERE emailAddress IS NULL")
+    Slice<Employee> findNullEmailAddresses(Pageable pageable);
+
+    @Query("SELECT e FROM Employee e WHERE emailAddress IS NULL")
+    List<Employee> findByEmailAddressNull();
 }
