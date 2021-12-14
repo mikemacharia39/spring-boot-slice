@@ -43,10 +43,10 @@ public class SpringBootSliceApplication implements CommandLineRunner {
 
 		log.info("Using slice ==============================");
 
-		Pageable pageable = PageRequest.of(0, 40000);
+		Pageable pageable = PageRequest.of(0, 80000);
 		boolean hasMoreRecords;
 		int chunkNumber = 0;
-		String searchString = "Mikehenry";
+		String searchString = "Katana";
 		do {
 			Slice<Task> taskSlice = taskService.findTaskByEmployeeNameAsSlice(searchString, pageable);
 			hasMoreRecords = taskSlice.hasNext();
@@ -55,19 +55,17 @@ public class SpringBootSliceApplication implements CommandLineRunner {
 			chunkNumber++;
 
 			List<Task> taskListFromSlice = taskSlice.getContent();
-			List<Task> updatedTaskDetails = new ArrayList<>();
+			List<Task> updatedTaskDetailsList = new ArrayList<>();
 			taskListFromSlice.forEach(task -> {
-				task.setTaskName("Task by " + searchString);
-				task.setDescription("Task was created by " + searchString);
-				updatedTaskDetails.add(task);
+				taskService.updateTask(task, searchString);
+				updatedTaskDetailsList.add(task);
 			});
 
-			taskService.updateListOfTaskDetails(updatedTaskDetails);
+			taskService.updateListOfTaskDetails(updatedTaskDetailsList);
 
 			log.info("Chunk number: {}  chunk size: {}", chunkNumber, chunkSize);
 
 			pageable = taskSlice.nextPageable();
-			Thread.sleep(100);
 		} while (hasMoreRecords);
 
 	}

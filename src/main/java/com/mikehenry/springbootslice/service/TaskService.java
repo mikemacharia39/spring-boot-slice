@@ -181,4 +181,9 @@ public class TaskService {
 
         log.info("updated task update");
     }
+
+    public void updateTask(Task task, String searchString) {
+        task.setTaskName("Task by " + searchString);
+        task.setDescription("Task was created by " + searchString);
+    }
 }
