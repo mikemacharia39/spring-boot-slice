@@ -25,7 +25,7 @@ public class TaskService {
 
     private final EmployeeRepository employeeRepository;
 
-    @Autowired
+    @PersistenceUnit(unitName = "default")
     private EntityManagerFactory entityManagerFactory;
 
     @PersistenceContext
