@@ -14,6 +14,7 @@ import org.springframework.stereotype.Service;
 import javax.persistence.EntityManager;
 import javax.persistence.EntityManagerFactory;
 import javax.persistence.PersistenceContext;
+import javax.persistence.PersistenceUnit;
 import javax.persistence.criteria.CriteriaBuilder;
 import javax.persistence.criteria.CriteriaQuery;
 import javax.persistence.criteria.Predicate;
@@ -30,7 +31,7 @@ public class EmployeeService {
 
     private final EmployeeRepository employeeRepository;
 
-    @Autowired
+    @PersistenceUnit(unitName = "default")
     private EntityManagerFactory entityManagerFactory;
 
     @PersistenceContext
