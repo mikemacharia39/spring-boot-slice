@@ -2,6 +2,7 @@ package com.mikehenry.springbootslice.service;
 
 import com.mikehenry.springbootslice.model.Employee;
 import com.mikehenry.springbootslice.repository.EmployeeRepository;
+import com.mikehenry.springbootslice.util.Benchmark;
 import com.mikehenry.springbootslice.util.Utility;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -19,10 +20,8 @@ import javax.persistence.criteria.CriteriaBuilder;
 import javax.persistence.criteria.CriteriaQuery;
 import javax.persistence.criteria.Predicate;
 import javax.persistence.criteria.Root;
-import java.util.ArrayList;
-import java.util.Date;
-import java.util.List;
-import java.util.Optional;
+import java.time.LocalDateTime;
+import java.util.*;
 
 @Service
 @Slf4j
@@ -37,6 +36,37 @@ public class EmployeeService {
     @PersistenceContext
     private EntityManager entityManager;
 
+    private final Random random = new Random();
+
+    /**
+     * Testing batch save
+     */
+    public void saveAll() {
+        log.info("Saving all employees");
+        List<String> employeeList = Arrays.asList("Ann", "Alex", "Bryan", "Ben", "Betty", "Grace", "Mike","Zack", "Wale", "Wren", "Paul", "Purity", "Peter", "Naomi");
+        List<Employee> employees = new ArrayList<>();
+        long currentStartTime = System.currentTimeMillis();
+
+        int limit = 100000;
+        for (int i = 0; i <= limit; i++) {
+            String employeeName = employeeList.get(random.nextInt(employeeList.size()));
+
+            Employee employee = new Employee();
+            employee.setFirstName(employeeName);
+            employee.setLastName(employeeName + i);
+            employee.setEmailAddress(employeeName +"-"+ LocalDateTime.now() + "@mail.com");
+            employee.setActive(1);
+            employee.setChangeDetails(employeeName);
+            employee.setDateModified(new Date());
+            employee.setDateCreated(new Date());
+
+            employees.add(employee);
+        }
+        log.info("Before save :: For {} records it took {} to prepare batch", limit, Benchmark.getTAT(currentStartTime));
+        employeeRepository.saveAll(employees);
+
+        log.info("After save :: For {} records it took {}", limit, Benchmark.getTAT(currentStartTime));
+    }
 
     public void getEmployeeLesserThanCurrentDate() {
 
