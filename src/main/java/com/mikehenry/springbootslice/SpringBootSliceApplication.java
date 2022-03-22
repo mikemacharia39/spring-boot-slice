@@ -1,6 +1,8 @@
 package com.mikehenry.springbootslice;
 
+import com.mikehenry.springbootslice.model.Address;
 import com.mikehenry.springbootslice.model.Task;
+import com.mikehenry.springbootslice.service.AddressService;
 import com.mikehenry.springbootslice.service.EmployeeService;
 import com.mikehenry.springbootslice.service.TaskService;
 import lombok.RequiredArgsConstructor;
@@ -24,6 +26,8 @@ public class SpringBootSliceApplication implements CommandLineRunner {
 
 	private final EmployeeService employeeService;
 
+	private final AddressService addressService;
+
 	public static void main(String[] args) {
 		SpringApplication.run(SpringBootSliceApplication.class, args);
 	}
@@ -32,7 +36,9 @@ public class SpringBootSliceApplication implements CommandLineRunner {
 	public void run(String... args) throws Exception {
 		taskService.insertTasks();
 
-		employeeService.saveAll();
+		addressService.saveAll();
+
+		// employeeService.saveAll();
 
 		log.info("Finding task by assigner and assignee =============================");
 		List<Task> taskList = taskService.findTaskByAssignerAndAssignee("Mike", "Zack");
